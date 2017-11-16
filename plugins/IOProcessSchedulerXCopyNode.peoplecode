@@ -1,0 +1,198 @@
+import PT_PC_UTIL:StringMap;
+import PTEM_CONFIG:IEMConfigurationPlugin;
+import PTEM_CONFIG:PTEMHelpMessage;
+import PTEM_CONFIG:PTEMVariableProperty;
+import PTEM_CONFIG:EMConfigurationPlugin;
+
+
+class IOProcessSchedulerXCopyNode extends PTEM_CONFIG:EMConfigurationPlugin
+   method getPluginHelpMessage() Returns PTEM_CONFIG:PTEMHelpMessage;
+   method getProperties() Returns array of PTEM_CONFIG:PTEMVariableProperty;
+   
+   method validateVariables(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method configureEnvironment(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method validateConfigurations(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method dependant_plugins() Returns array of string;
+   method isInternalPlugin() Returns boolean;
+end-class;
+
+
+method getPluginHelpMessage
+   /+ Returns PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getPluginHelpMessage +/
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   &tempMessage = create PTEM_CONFIG:PTEMHelpMessage(0, 0, "Plugin to run processes", Null);
+   Return &tempMessage;
+end-method;
+
+method configureEnvironment
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.configureEnvironment +/
+   
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   
+   /*
+Local string &distnodename;
+   Local string &opsys;
+   Local string &winnetworkpath;
+   Local string &host;
+   Local string &port;
+   
+   
+   &distnodename = &variables.get("env.distnodename");
+   &opsys = &variables.get("env.opsys");
+   &winnetworkpath = &variables.get("env.winnetworkpath");
+   &host = &variables.get("env.host");
+   &port = &variables.get("env.port");
+*/
+   
+   Local integer &i1;
+   Local boolean &insert;
+   
+   If %This.hasAccess() = False Then
+      Return Null;
+   End-If;
+   
+   /*
+   Local boolean &flag;
+   Local integer &i;
+   Local string &dummy;*/
+   Local string &trprotocol = "XCOPY";
+   Local File &fileLog;
+   Local ApiObject &oSession, &oPrsReportNodeCi;
+   Local object &appObject = Null;
+   
+   try
+      
+      rem ***** Get current PeopleSoft Session *****;
+      &oSession = %Session;
+      
+      rem ***** Set the PeopleSoft Session Error Message Mode *****;
+      rem ***** 0 - None *****;
+      rem ***** 1 - PSMessage Collection only (default) *****;
+      rem ***** 2 - Message Box only *****;
+      rem ***** 3 - Both collection and message box *****;
+      &oSession.PSMessagesMode = 1;
+      
+      &appObject = CreateObject("PTEM_CONFIG:PTCIPluginProperties");
+      
+      rem ***** Get the Component Interface *****;
+      &oPrsReportNodeCi = &oSession.GetCompIntfc(CompIntfc.PRS_REPORT_NODE_CI);
+      If &oPrsReportNodeCi = Null Then
+         &appObject.errorHandler();
+         throw CreateException(278, 88, "GetCompIntfc failed");
+      End-If;
+      
+      rem ***** Set the Component Interface Mode *****;
+      &oPrsReportNodeCi.InteractiveMode = False;
+      &oPrsReportNodeCi.GetHistoryItems = True;
+      &oPrsReportNodeCi.EditHistoryItems = False;
+      
+      /* function to assign(update/create) values from property file to Database  */
+      &appObject.assign_values_to_CI_from_prop_file("PRS_REPORT_NODE_CI", &oPrsReportNodeCi, &variables, &plugin);
+      
+      rem BUG# 14667568;
+      Local string &distnodename = &oPrsReportNodeCi.getpropertybyname("DISTNODENAME");
+      
+      rem update uri_rpt field for report manager;
+      Local string &tmpStr1, &tmpURL, &default_local_node, &portal_name, &tmpStr2;
+      Local integer &pos;
+      Local string &url;
+      
+      SQLExec("SELECT MSGNODENAME FROM PSMSGNODEDEFN WHERE LOCALDEFAULTFLG = :1", "Y", &default_local_node);
+      SQLExec("SELECT PORTAL_NAME FROM PSMSGNODEDEFN WHERE MSGNODENAME = :1", &default_local_node, &portal_name);
+      
+      If All(&url) Then
+         &tmpStr1 = Substitute(&url, "psreports", "psc");
+         &tmpURL = GenerateComponentContentURL(&portal_name, &default_local_node, MenuName.CDM_RPT, "GBL", Component.CDM_RPT, Page.CDM_RPT_INDEX, "U") | "&CDM_ID=";
+         &pos = Find(&portal_name, &tmpURL);
+         &tmpStr2 = Substring(&tmpURL, 1, (&pos - 2));
+         &tmpURL = Substitute(&tmpURL, &tmpStr2, &tmpStr1);
+         
+         SQLExec("UPDATE PS_CDM_DIST_NODE SET URI_RPT = :1 WHERE DISTNODENAME = :2", &tmpURL, &distnodename);
+      End-If;
+      
+      rem update uri_rpt field for report manager -- end;
+      
+      rem Update the Transfer Protocol;
+      SQLExec("UPDATE PS_CDM_DIST_NODE SET PT_TRANSFR_PROTCOL = :1 WHERE DISTNODENAME = :2", &trprotocol, &distnodename);
+      rem :END: Update the Transfer Protocol;
+      
+      
+   catch Exception &ex
+      &tempMessage = create PTEM_CONFIG:PTEMHelpMessage(0, 0, &ex.ToString(), Null);
+      &helpMsgArray = CreateArray(&tempMessage);
+      Return &helpMsgArray;
+   end-try;
+   
+   Return &helpMsgArray;
+   
+end-method;
+
+
+method validateVariables
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateVariables +/
+   
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage;
+   &helpMsgArray = CreateArrayRept(&tempMessage, 0);
+   Local array of string &param = CreateArray("");
+   Return Null;
+   
+end-method;
+
+method validateConfigurations
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateConfigurations +/
+   
+   
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage;
+   &helpMsgArray = CreateArrayRept(&tempMessage, 0);
+   Local array of string &param = CreateArray("");
+   
+   
+   Return &helpMsgArray;
+end-method;
+
+method getProperties
+   /+ Returns Array of PTEM_CONFIG:PTEMVariableProperty +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getProperties +/
+   
+   
+   Local array of PTEM_CONFIG:PTEMVariableProperty &propArray = Null;
+   Local PTEM_CONFIG:PTEMVariableProperty &variableProperty = Null;
+   
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.distnodename", "string", True, False, "", 0, 0, "Report Node Name", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.opsys", "string", True, False, "", 0, 0, "Operating System", Null);
+   &propArray.Push(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.winnetworkpath", "string", True, False, "", 0, 0, "Network Path", Null);
+   &propArray.Push(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.url", "string", False, False, "", 0, 0, "Report Server Hostname", Null);
+   &propArray.Push(&variableProperty);
+   Return &propArray;
+   
+end-method;
+
+method dependant_plugins
+   /+ Returns Array of String +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.dependant_plugins +/
+   Local array of string &dependant_array;
+   &dependant_array = CreateArray("");
+   Return &dependant_array;
+end-method;
+
+method isInternalPlugin
+   /+ Returns Boolean +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.isInternalPlugin +/
+   Return False;
+end-method;
