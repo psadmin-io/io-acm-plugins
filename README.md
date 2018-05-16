@@ -23,3 +23,18 @@ This plugin has four parameters:
 ## IOTruncateTable
 
 This plugin has one parameter: `tablelist`. `tablelist` takes a comma separated list of table names and will run `truncate table %table(&tablename)` for each table in the list.
+
+## IOWebProfileAuthorizedSites
+
+This plugin requires the following parameters:
+* `webprofilename`:  The webprofile to continue
+* `authorized_sites_count`: The number of Authorized Sites entries
+* `site1_authsiteproto`: 'H' for HTTP or 'S' for HTTPS
+* `site1_authsitehostname`: The authorized site host
+* `site1_authsiteportnum`: The authorized site port
+* `site1_ptcorstype`: CORS Checkbox 'Y' or 'N'
+* `site1_ptsecuritytype1`: Framable Checkbox 'Y' or 'N'
+* `site1_ptsecuritytype2`: CheckToken Checkbox 'Y' or 'N'
+
+Repeat `siteX_*` paramaters for each Authorized Site entry (matching `authorized_sites_count`)
+
