@@ -1,0 +1,136 @@
+import PT_PC_UTIL:StringMap;
+import PTEM_CONFIG:IEMConfigurationPlugin;
+import PTEM_CONFIG:PTEMHelpMessage;
+import PTEM_CONFIG:PTEMVariableProperty;
+import PTEM_CONFIG:EMConfigurationPlugin;
+
+
+class IOWebProfileAuthorizedSites extends PTEM_CONFIG:EMConfigurationPlugin
+   method getPluginHelpMessage() Returns PTEM_CONFIG:PTEMHelpMessage;
+   method getProperties() Returns array of PTEM_CONFIG:PTEMVariableProperty;
+   
+   method validateVariables(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method configureEnvironment(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method validateConfigurations(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method dependant_plugins() Returns array of string;
+   method isInternalPlugin() Returns boolean;
+   
+end-class;
+
+
+method getPluginHelpMessage
+   /+ Returns PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getPluginHelpMessage +/
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   &tempMessage = create PTEM_CONFIG:PTEMHelpMessage(0, 0, "Plugin to update authorized sites on webprofile", Null);
+   Return &tempMessage;
+end-method;
+
+method getProperties
+   /+ Returns Array of PTEM_CONFIG:PTEMVariableProperty +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getProperties +/
+   
+   
+   Local array of PTEM_CONFIG:PTEMVariableProperty &propArray = Null;
+   Local PTEM_CONFIG:PTEMVariableProperty &variableProperty = Null;
+   
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.webprofilename", "string", True, False, "", 0, 0, "Web Profile Name", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.authorized_sites_count", "number", True, False, "0", 0, 0, "Number of Authorized Sites", Null);
+   &propArray.Push(&variableProperty);
+   
+   Return &propArray;
+   
+end-method;
+
+
+method configureEnvironment
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.configureEnvironment +/
+   
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   
+   Local string &web_prof_name = &variables.get("env.webprofilename");
+   Local string &noOfsites = &variables.get("env.authorized_sites_count");
+   
+   Local number &i, &count;
+   &count = 1;
+   
+   If Value(&noOfsites) > 0 Then
+      &count = Value(&noOfsites);
+      
+      For &i = 1 To &count
+         Local string &authsiteproto = &variables.get("env.site" | &i | "_authsiteproto");
+         Local string &authsitehost = &variables.get("env.site" | &i | "_authsitehostname");
+         Local string &authsiteport = &variables.get("env.site" | &i | "_authsiteportnum");
+         Local string &corstype = &variables.get("env.site" | &i | "_ptcorstype");
+         Local string &frameable = &variables.get("env.site" | &i | "_ptsecuritytype1");
+         Local string &checktoken = &variables.get("env.site" | &i | "_ptsecuritytype2");
+         Local string &isfound;
+         
+         SQLExec("SELECT 'X' FROM PSPTWEBAUTHSITE WHERE WEBPROFILENAME = :1 AND HOSTNAME = :2 AND PTPORTNUMBER = :3 AND SCHEME = :4", &web_prof_name, &authsitehost, &authsiteport, &authsiteproto, &isfound);
+         
+         If None(&isfound) Then
+            SQLExec("INSERT INTO PSPTWEBAUTHSITE (WEBPROFILENAME, HOSTNAME, PTPORTNUMBER, SCHEME, PTCORSTYPE, PTSECURITYTYPE1, PTSECURITYTYPE2, PTSECURITYTYPE3, PTSECURITYTYPE4, PTSECURITYTYPE5, PTSECURITYTYPE6, PTSECURITYTYPE7, PTSECURITYTYPE8, PTSECURITYTYPE9) VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14)", &web_prof_name, &authsitehost, &authsiteport, &authsiteproto, &corstype, &frameable, &checktoken, "N", "N", "N", "N", "N", "N", "N");
+         End-If;
+         
+         &variables.remove("env.site" | &i | "_authsiteproto");
+         &variables.remove("env.site" | &i | "_authsitehostname");
+         &variables.remove("env.site" | &i | "_authsiteportnum");
+         &variables.remove("env.site" | &i | "_ptcorstype");
+         &variables.remove("env.site" | &i | "_ptsecuritytype1");
+         &variables.remove("env.site" | &i | "_ptsecuritytype2");
+      End-For;
+   End-If;
+   Return &helpMsgArray;
+end-method;
+
+
+
+method dependant_plugins
+   /+ Returns Array of String +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.dependant_plugins +/
+   Local array of string &dependant_array;
+   &dependant_array = CreateArray("");
+   Return &dependant_array;
+end-method;
+
+method validateVariables
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateVariables +/
+   
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage;
+   &helpMsgArray = CreateArrayRept(&tempMessage, 0);
+   Local array of string &param = CreateArray("");
+   Return Null;
+   
+end-method;
+
+method validateConfigurations
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateConfigurations +/
+   
+   
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage;
+   &helpMsgArray = CreateArrayRept(&tempMessage, 0);
+   Local array of string &param = CreateArray("");
+   
+   
+   Return &helpMsgArray;
+end-method;
+
+method isInternalPlugin
+   /+ Returns Boolean +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.isInternalPlugin +/
+   Return False;
+end-method;
+
