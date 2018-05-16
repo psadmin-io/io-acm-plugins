@@ -1,0 +1,132 @@
+import PT_PC_UTIL:StringMap;
+import PTEM_CONFIG:IEMConfigurationPlugin;
+import PTEM_CONFIG:PTEMHelpMessage;
+import PTEM_CONFIG:PTEMVariableProperty;
+import PTEM_CONFIG:EMConfigurationPlugin;
+
+
+class IOProcessSchedulerDaemonConfig extends PTEM_CONFIG:EMConfigurationPlugin
+   method getPluginHelpMessage() Returns PTEM_CONFIG:PTEMHelpMessage;
+   method getProperties() Returns array of PTEM_CONFIG:PTEMVariableProperty;
+   
+   method validateVariables(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method configureEnvironment(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method validateConfigurations(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method dependant_plugins() Returns array of string;
+   method isInternalPlugin() Returns boolean;
+   
+end-class;
+
+
+method getPluginHelpMessage
+   /+ Returns PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getPluginHelpMessage +/
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   &tempMessage = create PTEM_CONFIG:PTEMHelpMessage(0, 0, "Plugin to configure Daemon settings for Process Scheduler", Null);
+   Return &tempMessage;
+end-method;
+
+method getProperties
+   /+ Returns Array of PTEM_CONFIG:PTEMVariableProperty +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getProperties +/
+   
+   
+   Local array of PTEM_CONFIG:PTEMVariableProperty &propArray = Null;
+   Local PTEM_CONFIG:PTEMVariableProperty &variableProperty = Null;
+   
+   
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.servername", "string", True, False, "", 0, 0, "Process Scheduler Server", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.daemonenabled", "number", True, False, "0", 0, 0, "Daemon Enabled", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.daemonsleeptime", "number", True, False, "0", 0, 0, "Daemon Sleep Time", Null);
+   &propArray.Push(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.daemoncyclecnt", "number", True, False, "0", 0, 0, "Daemon Recycle Count", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.daemonprcsinst", "number", True, False, "0", 0, 0, "Daemon Process Instance", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.daemongroup", "string", True, False, "", 0, 0, "Daemon procedure group", Null);
+   &propArray = CreateArray(&variableProperty);
+   
+   Return &propArray;
+   
+end-method;
+
+
+method configureEnvironment
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.configureEnvironment +/
+   
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   
+   If %This.hasAccess() = False Then
+      Return Null;
+   End-If;
+   
+   Local string &servername = &variables.get("env.servername");
+   Local string &daemonenabled = &variables.get("env.daemonenabled");
+   Local string &daemonsleeptime = &variables.get("env.daemonsleeptime");
+   Local string &daemoncyclecnt = &variables.get("env.daemoncyclecnt");
+   Local string &daemonprcsinst = &variables.get("env.daemonprcsinst");
+   Local string &daemongroup = &variables.get("env.daemongroup");
+   Local string &isfound;
+   
+   try
+      SQLExec("UPDATE PS_SERVERDEFN SET DAEMONENABLED=:1, DAEMONSLEEPTIME=:2, DAEMONCYCLECNT=:3, DAEMONPRCSINST=:4, DAEMONGROUP=:5 where SERVERNAME=:6 ", &daemonenabled, &daemonsleeptime, &daemoncyclecnt, &daemonprcsinst, &daemongroup, &servername);
+   catch Exception &ex
+      &tempMessage = create PTEM_CONFIG:PTEMHelpMessage(0, 0, &ex.ToString(), Null);
+      &helpMsgArray = CreateArray(&tempMessage);
+      Return &helpMsgArray;
+   end-try;
+   
+   Return &helpMsgArray;
+end-method;
+
+
+method dependant_plugins
+   /+ Returns Array of String +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.dependant_plugins +/
+   Local array of string &dependant_array;
+   &dependant_array = CreateArray("PTProcessSchedulerServerConfig");
+   Return &dependant_array;
+end-method;
+
+method validateVariables
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateVariables +/
+   
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage;
+   &helpMsgArray = CreateArrayRept(&tempMessage, 0);
+   Local array of string &param = CreateArray("");
+   Return Null;
+   
+end-method;
+
+method validateConfigurations
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateConfigurations +/
+   
+   
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage;
+   &helpMsgArray = CreateArrayRept(&tempMessage, 0);
+   Local array of string &param = CreateArray("");
+   
+   
+   Return &helpMsgArray;
+end-method;
+
+method isInternalPlugin
+   /+ Returns Boolean +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.isInternalPlugin +/
+   Return False;
+end-method;
+
