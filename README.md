@@ -36,5 +36,5 @@ This plugin requires the following parameters:
 * `site1_ptsecuritytype1`: Framable Checkbox 'Y' or 'N'
 * `site1_ptsecuritytype2`: CheckToken Checkbox 'Y' or 'N'
 
-Repeat `siteX_*` paramaters for each Authorized Site entry (matching `authorized_sites_count`)
+Repeat `siteX_*` paramaters for each Authorized Site entry (matching number in `authorized_sites_count`)
 
