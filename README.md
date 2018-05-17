@@ -39,3 +39,13 @@ This plugin requires the following parameters:
 
 Repeat `siteX_*` parameters for each authorized site entry (matching number in `authorized_sites_count`)
 
+## IOProcessSchedulerDaemonConfig
+
+This plugin requires the following parameters:
+
+* `servername`:  Process Scheduler server to configure
+* `daemonenabled`: Enabled? '0' or '1'
+* `daemonsleeptime`: Number, sleep time
+* `daemoncyclecnt`: Number, recycle count
+* `daemonprcsinst`: Number, Daemon process instance
+* `daemongroup`: String, Daemon process group
