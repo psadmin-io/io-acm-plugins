@@ -1,0 +1,141 @@
+import PT_PC_UTIL:StringMap;
+import PTEM_CONFIG:IEMConfigurationPlugin;
+import PTEM_CONFIG:PTEMHelpMessage;
+import PTEM_CONFIG:PTEMVariableProperty;
+import PTEM_CONFIG:EMConfigurationPlugin;
+
+class IOGatewayServiceURLs extends PTEM_CONFIG:EMConfigurationPlugin
+   method getPluginHelpMessage() Returns PTEM_CONFIG:PTEMHelpMessage;
+   method getProperties() Returns array of PTEM_CONFIG:PTEMVariableProperty;
+   
+   method validateVariables(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method configureEnvironment(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method validateConfigurations(&variables As PT_PC_UTIL:StringMap, &plugin As string) Returns array of PTEM_CONFIG:PTEMHelpMessage;
+   method dependant_plugins() Returns array of string;
+   method isInternalPlugin() Returns boolean;
+end-class;
+
+Declare Function GatewayUpdateVersions PeopleCode FUNCLIB_IB.FUNCLIB FieldFormula;
+Declare Function GatewayPSLOCK PeopleCode FUNCLIB_IB.FUNCLIB FieldFormula;
+
+method getPluginHelpMessage
+   /+ Returns PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getPluginHelpMessage +/
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   &tempMessage = create PTEM_CONFIG:PTEMHelpMessage(0, 0, "Plugin to run processes", Null);
+   Return &tempMessage;
+end-method;
+
+method configureEnvironment
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.configureEnvironment +/
+   
+   Local PTEM_CONFIG:PTEMHelpMessage &tempMessage = Null;
+   Local array of PTEM_CONFIG:PTEMHelpMessage &helpMsgArray = Null;
+   
+   rem TODO insert config code here;
+   Local string &gatewayHost = &variables.get("env.gateway_host");
+   Local string &gatewayPort = &variables.get("env.gateway_port");
+   Local string &gatewaySSLPort = &variables.get("env.gateway_ssl_port");
+   Local string &localNode = &variables.get("env.default_local_node");
+   Local boolean &doUpdateFlag;
+   Local number &version;
+   
+   Local Record &psGateway = CreateRecord(Record.PSGATEWAY);
+   &psGateway.CONNGATEWAYID.Value = "LOCAL";
+   &doUpdateFlag = &psGateway.SelectByKey();
+   
+   &version = GatewayUpdateVersions();
+   &psGateway.VERSION.Value = &version;
+   If &variables.getlocal("env.use_ssl_gateway", String(%This)) = "true" Then
+      &psGateway.CONNURL.Value = "https://" | &gatewayHost | ":" | &gatewaySSLPort | "/PSIGW/PeopleSoftListeningConnector/" | &localNode;
+   Else
+      &psGateway.CONNURL.Value = "http://" | &gatewayHost | ":" | &gatewayPort | "/PSIGW/PeopleSoftListeningConnector/" | &localNode;
+   End-If;
+   If &doUpdateFlag Then
+      &psGateway.Update();
+   Else
+      &psGateway.CONNGATEWAYID.Value = "LOCAL";
+      &psGateway.Insert();
+   End-If;
+   
+   GatewayPSLOCK();
+   
+   Local Record &psIBSvcSetup = CreateRecord(Record.PSIBSVCSETUP);
+   &psIBSvcSetup.SEQNO.Value = "1";
+   &doUpdateFlag = &psIBSvcSetup.SelectByKey();
+   
+   &psIBSvcSetup.IB_TGTLOCATION.Value = "http://" | &gatewayHost | ":" | &gatewayPort | "/PSIGW/PeopleSoftServiceListeningConnector/" | &localNode;
+   &psIBSvcSetup.IB_RESTTGTLOC.Value = "http://" | &gatewayHost | ":" | &gatewayPort | "/PSIGW/RESTListeningConnector/" | &localNode;
+   
+   If &variables.getlocal("env.use_ssl_gateway", String(%This)) = "true" Then
+      &psIBSvcSetup.IB_SECTGTLOCATION.Value = "httsp://" | &gatewayHost | ":" | &gatewaySSLPort | "/PSIGW/PeopleSoftServiceListeningConnector/" | &localNode;
+      &psIBSvcSetup.IB_RESTSECTGTLOC.Value = "httsp://" | &gatewayHost | ":" | &gatewaySSLPort | "/PSIGW/RESTListeningConnector/" | &localNode;
+   Else
+      &psIBSvcSetup.IB_SECTGTLOCATION.Value = "";
+      &psIBSvcSetup.IB_RESTSECTGTLOC.Value = "";
+   End-If;
+   
+   
+   If &doUpdateFlag Then
+      &psIBSvcSetup.Update();
+   End-If;
+   
+   Return &helpMsgArray;
+   
+end-method;
+
+method getProperties
+   /+ Returns Array of PTEM_CONFIG:PTEMVariableProperty +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.getProperties +/
+   
+   rem TODO insert properties code here;
+   Local array of PTEM_CONFIG:PTEMVariableProperty &propArray = Null;
+   Local PTEM_CONFIG:PTEMVariableProperty &variableProperty = Null;
+   
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.gateway_host", "string", True, False, "@host@.@domain@", 262, 1110, "Gateway host", Null);
+   &propArray = CreateArray(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.gateway_port", "number", True, False, "@httpport@", 262, 1111, "Gateway port", Null);
+   &propArray.Push(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.gateway_ssl_port", "number", True, False, "@sslport@", 262, 1112, "Gateway SSL port", Null);
+   &propArray.Push(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.use_ssl_gateway", "boolean", False, False, "false", 262, 1113, "Use SSL gateway; Flag determines if the configuration is secure(https) or non secure (http); True-> https, false->http", Null);
+   &propArray.Push(&variableProperty);
+   &variableProperty = create PTEM_CONFIG:PTEMVariableProperty("env.default_local_node", "string", True, False, "@nodename@", 262, 1103, "Default local node", Null);
+   &propArray.Push(&variableProperty);
+   
+   Return &propArray;
+   
+end-method;
+
+method validateVariables
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateVariables +/
+   Return Null;
+end-method;
+
+method validateConfigurations
+   /+ &variables as PT_PC_UTIL:StringMap, +/
+   /+ &plugin as String +/
+   /+ Returns Array of PTEM_CONFIG:PTEMHelpMessage +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.validateConfigurations +/
+   Return Null;
+end-method;
+
+method dependant_plugins
+   /+ Returns Array of String +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.dependant_plugins +/
+   Local array of string &dependant_array;
+   &dependant_array = CreateArray("");
+   Return &dependant_array;
+end-method;
+
+method isInternalPlugin
+   /+ Returns Boolean +/
+   /+ Extends/implements PTEM_CONFIG:EMConfigurationPlugin.isInternalPlugin +/
+   Return False;
+end-method;
