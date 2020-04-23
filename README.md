@@ -11,6 +11,16 @@ This repository is a collection of custom ACM plug-ins. The PeopleCode is in pla
 
 The plugin will be available on ACM templates.
 
+## IOGatewayServiceURLs
+
+This plug has 5 parameters:
+
+* `gateway_host`: URL for Gateway
+* `gateway_port`: 8000
+* `gateway_ssl_port`: 8443
+* `use_ssl_gateway`: false|true
+* `default_local_node`: '%LocalNode'
+
 ## IOProcessSchedulerXCopyReportNode
 
 This plugin has four parameters: 
